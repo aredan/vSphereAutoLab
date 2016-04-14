@@ -15,12 +15,8 @@ if (Test-Path B:\Automate\automate.ini) {
 	Write-BuildLog "Setup Users"
 	NET ACCOUNTS /MAXPWAGE:UNLIMITED >> C:\AD-Users.log 2>> C:\Error.log
 	net group "Domain Admins" vi-admin /add >> C:\AD-Users.log 2>> C:\Error.log
-	net user  SVC_Veeam $AdminPWD /add /Domain >> C:\AD-Users.log 2>> C:\Error.log
-	net group "Domain Admins" SVC_Veeam /add >> C:\AD-Users.log 2>> C:\Error.log
 	net user  SVC_SRM $AdminPWD /add /Domain >> C:\AD-Users.log 2>> C:\Error.log
 	net group "Domain Admins" SVC_SRM /add >> C:\AD-Users.log 2>> C:\Error.log
-	net user  SVC_vCD $AdminPWD /add /Domain >> C:\AD-Users.log 2>> C:\Error.log
-	net group "Domain Admins" SVC_vCD /add >> C:\AD-Users.log 2>> C:\Error.log
 	net group "ESX Admins" /add >> C:\AD-Users.log 2>> C:\Error.log
 	net group "ESX Admins" vi-admin /add >> C:\AD-Users.log 2>> C:\Error.log
 	net user DomUser $AdminPWD /add /domain >> C:\AD-Users.log 2>> C:\Error.log 
@@ -41,6 +37,8 @@ if (Test-Path B:\Automate\automate.ini) {
 	Write-BuildLog "Change default local administrator password"
 	net user administrator $AdminPWD
 	B:\automate\_Common\Autologon administrator lab $AdminPWD
+	$emailto = ((Select-String -SimpleMatch "emailto=" -Path "B:\Automate\automate.ini").line).substring(8)
+	$SmtpServer = ((Select-String -SimpleMatch "SmtpServer=" -Path "B:\Automate\automate.ini").line).substring(11)
 } Else {
 	Write-BuildLog "Cannot find Automate.ini, this isn't a good sign"
 }
@@ -102,10 +100,10 @@ $TempContent | Set-Content B:\Automate\Hosts\esx12-5.cfg
  
 Write-BuildLog "Checking for vSphere files..."
 if (Test-Path "B:\ESXi60\*") {
-	if (Test-Path "B:\ESXi60\*.iso") {
+	if ((Test-Path "B:\ESXi60\*.iso") -and !(Test-Path "B:\ESXi60\BOOT.CFG") ){
 		Write-BuildLog "Extracting ESXi 6.0 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\ESXi60\ B:\ESXi60\*.iso >> C:\ExtractLog.txt
-	}
+	}  
 	Write-BuildLog "ESXi 6.0 found; creating C:\TFTP-Root\ESXi60 and copying ESXi 6.0 boot files."
 	$null = $null = New-Item -Path C:\TFTP-Root\ESXi60 -ItemType Directory -Force -Confirm:$false
 	xcopy B:\ESXi60\*.* C:\TFTP-Root\ESXi60 /s /c /y /q
@@ -126,7 +124,7 @@ if (Test-Path "B:\ESXi60\*") {
 }
 
 if (Test-Path "B:\ESXi55\*") {
-	if (Test-Path "B:\ESXi55\*.iso") {
+	if ((Test-Path "B:\ESXi55\*.iso")  -and !(Test-Path "B:\ESXi55\BOOT.CFG") ){
 		Write-BuildLog "Extracting ESXi 5.5 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\ESXi55\ B:\ESXi55\*.iso >> C:\ExtractLog.txt
 	}
@@ -150,7 +148,7 @@ if (Test-Path "B:\ESXi55\*") {
 }
 
 if (Test-Path "B:\ESXi51\*") {
-	if (Test-Path "B:\ESXi51\*.iso") {
+	if ((Test-Path "B:\ESXi51\*.iso")  -and !(Test-Path "B:\ESXi51\BOOT.CFG") ) {
 		Write-BuildLog "Extracting ESXi 5.1 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\ESXi51\ B:\ESXi51\*.iso >> C:\ExtractLog.txt
 	}
@@ -174,7 +172,7 @@ if (Test-Path "B:\ESXi51\*") {
 }
 
 if (Test-Path "B:\ESXi50\*") {
-	if (Test-Path "B:\ESXi50\*.iso") {
+	if ((Test-Path "B:\ESXi50\*.iso")  -and !(Test-Path "B:\ESXi50\BOOT.CFG") ) {
 		Write-BuildLog "Extracting ESXi 5.0 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\ESXi50\ B:\ESXi50\*.iso >> C:\ExtractLog.txt
 	}
@@ -198,7 +196,7 @@ if (Test-Path "B:\ESXi50\*") {
 }
 
 if (Test-Path "B:\ESXi41\*") {
-	if (Test-Path "B:\ESXi41\*.iso") {
+	if ((Test-Path "B:\ESXi41\*.iso")  -and !(Test-Path "B:\ESXi41\BOOT.CAT") ) {
 		Write-BuildLog "Extracting ESXi 4.1 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\ESXi41\ B:\ESXi41\*.iso >> C:\ExtractLog.txt
 	}
@@ -220,7 +218,7 @@ if (Test-Path "B:\ESXi41\*") {
 }
 
 if (Test-Path "B:\ESX41\*") {
-	if (Test-Path "B:\ESX41\*.iso") {
+	if ((Test-Path "B:\ESX41\*.iso")  -and !(Test-Path "B:\ESX41\packages.xml") ) {
 		Write-BuildLog "Extracting ESX 4.1 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\ESX41\ B:\ESX41\*.iso >> C:\ExtractLog.txt
 	}
@@ -244,7 +242,7 @@ if (!($esx41 -or $esxi41 -or $esxi50 -or $esxi51 -or $esxi55 -or $esxi60)) {
 }
 Write-BuildLog "Checking for vCenter files..."
 if (Test-Path "B:\VIM_60\*") {
-	if (Test-Path "B:\VIM_60\*.iso") {
+	if ((Test-Path "B:\VIM_60\*.iso") -and !(Test-Path "B:\VIM_60\autorun.exe")){
 		Write-BuildLog "Extracting vCenter 6.0 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VIM_60\ B:\VIM_60\*.iso >> C:\ExtractLog.txt
 	}
@@ -254,7 +252,7 @@ if (Test-Path "B:\VIM_60\*") {
 	$vCenter60 = $false
 }
 if (Test-Path "B:\VIM_55\*") {
-	if (Test-Path "B:\VIM_55\*.iso") {
+	if ((Test-Path "B:\VIM_55\*.iso") -and !(Test-Path "B:\VIM_55\autorun.exe")){
 		Write-BuildLog "Extracting vCenter 5.5 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VIM_55\ B:\VIM_55\*.iso >> C:\ExtractLog.txt
 	}
@@ -264,7 +262,7 @@ if (Test-Path "B:\VIM_55\*") {
 	$vCenter55 = $false
 }
 if (Test-Path "B:\VIM_51\*") {
-	if (Test-Path "B:\VIM_51\*.iso") {
+	if ((Test-Path "B:\VIM_51\*.iso") -and !(Test-Path "B:\VIM_51\autorun.exe")) {
 		Write-BuildLog "Extracting vCenter 5.1 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VIM_51\ B:\VIM_51\*.iso >> C:\ExtractLog.txt
 	}
@@ -275,7 +273,7 @@ if (Test-Path "B:\VIM_51\*") {
 }
 
 if (Test-Path "B:\VIM_50\*") {
-	if (Test-Path "B:\VIM_50\*.iso") {
+	if ((Test-Path "B:\VIM_50\*.iso") -and !(Test-Path "B:\VIM_50\autorun.exe")) {
 		Write-BuildLog "Extracting vCenter 5.0 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VIM_50\ B:\VIM_50\*.iso >> C:\ExtractLog.txt
 	}
@@ -286,7 +284,7 @@ if (Test-Path "B:\VIM_50\*") {
 }
 
 if (Test-Path "B:\VIM_41\*") {
-	if (Test-Path "B:\VIM_41\*.iso") {
+	if ((Test-Path "B:\VIM_41\*.iso") -and !(Test-Path "B:\VIM_41\autorun.exe")) {
 		Write-BuildLog "Extracting vCenter 4.1 installer from ISO."
 		. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VIM_41\ B:\VIM_41\*.iso >> C:\ExtractLog.txt
 	}
@@ -339,52 +337,6 @@ if (!($vSphere41 -or $vSphere50 -or $vSphere51 -or $vSphere55 -or $vSphere60)) {
 }
 
 Write-BuildLog ""
-Write-BuildLog "Checking for vCloud files..."
-if (Test-Path "B:\vCD_51\vmware-vcloud-director-5.1*.bin") {
-	Write-BuildLog "vCloud Director 5.1 found."
-	$vcd51 = $true
-} else {
-	$vcd51 = $false
-}
-
-if (Test-Path "B:\vCD_51\VMware-vShield-Manager-5.1*.ova") {
-	Write-BuildLog "vShield Manager 5.1 for vCloud Director 5.1 found."
-	$vcd51vsm = $true
-} else {
-	$vcd51vsm = $false
-}
-
-if ($vcd51 -and $vcd51vsm) {
-	powershell C:\PXEMenuConfig.ps1 vCloud
-	powershell C:\PXEMenuConfig.ps1 vCD51
-	Write-BuildLog "Added vCloud Director 5.1 to PXE menu."
-} elseif ($vcd51 -or $vcd51vsm) {
-	Write-BuildLog "vCloud 5.1 installation requirements not met. Please verify that both vCloud 5.1 & vShield Manager 5.1 exist on the Build share."
-}
-
-if (Test-Path "B:\vCD_15\vmware-vcloud-director-1.5*.bin") {
-	Write-BuildLog "vCloud Director 1.5 found."
-	$vcd15 = $true
-} else {
-	$vcd15 = $false
-}
-
-if (Test-Path "B:\vCD_15\VMware-vShield-Manager-5.0*.ova") {
-	Write-BuildLog "vShield Manager 5.0 for vCloud Director 1.5 found."
-	$vcd15vsm = $true
-} else {
-	$vcd15vsm = $false
-}
-
-if ($vcd15 -and $vcd15vsm) {
-	powershell C:\PXEMenuConfig.ps1 vCloud
-	powershell C:\PXEMenuConfig.ps1 vCD15
-	Write-BuildLog "Added vCloud Director 1.5 to PXE menu."
-} elseif ($vcd15 -or $vcd15vsm) {
-	Write-BuildLog "vCloud 1.5 installation requirements not met. Please verify that both vCloud 1.5 & vShield Manager 5.0 exist on the Build share."
-}
-
-Write-BuildLog ""
 Write-BuildLog "Authorise and configure DHCP"
 netsh dhcp server 192.168.199.4 set dnscredentials administrator lab.local $AdminPWD
 netsh dhcp add server dc.lab.local 192.168.199.4 >> C:\DNS.log
@@ -416,11 +368,6 @@ dnscmd localhost /RecordAdd lab.local Host4 A 192.168.199.14 >> C:\DNS.log
 dnscmd localhost /RecordAdd lab.local CS1 A 192.168.199.33 >> C:\DNS.log
 dnscmd localhost /RecordAdd lab.local CS2 A 192.168.199.34 >> C:\DNS.log
 dnscmd localhost /RecordAdd lab.local SS A 192.168.199.35 >> C:\DNS.log
-dnscmd localhost /RecordAdd lab.local V1 A 192.168.199.36 >> C:\DNS.log
-dnscmd localhost /RecordAdd lab.local VBR A 192.168.199.37 >> C:\DNS.log
-dnscmd localhost /RecordAdd lab.local vcd A 192.168.199.38 >> C:\DNS.log
-dnscmd localhost /RecordAdd lab.local vcd-proxy A 192.168.199.39 >> C:\DNS.log
-dnscmd localhost /RecordAdd lab.local vshield A 192.168.199.40 >> C:\DNS.log
 dnscmd localhost /RecordAdd lab.local DC2 A 192.168.201.4 >> C:\DNS.log
 dnscmd localhost /RecordAdd lab.local VC2 A 192.168.201.5 >> C:\DNS.log
 dnscmd localhost /RecordAdd lab.local Host11 A 192.168.201.11 >> C:\DNS.log
@@ -436,11 +383,6 @@ dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 14 PTR Host4.lab.local >> C
 dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 33 PTR cs1.lab.local >> C:\DNS.log
 dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 34 PTR cs2.lab.local >> C:\DNS.log
 dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 35 PTR SS.lab.local >> C:\DNS.log
-dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 36 PTR V1.lab.local >> C:\DNS.log
-dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 37 PTR VBR.lab.local >> C:\DNS.log
-dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 38 PTR vcd.lab.local >> C:\DNS.log
-dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 39 PTR vcd-proxy.lab.local >> C:\DNS.log
-dnscmd localhost /RecordAdd 199.168.192.in-addr.arpa 40 PTR vshield.lab.local >> C:\DNS.log
 dnscmd localhost /RecordAdd 201.168.192.in-addr.arpa 4 PTR DC2.lab.local >> C:\DNS.log
 dnscmd localhost /RecordAdd 201.168.192.in-addr.arpa 5 PTR VC2.lab.local >> C:\DNS.log
 dnscmd localhost /RecordAdd 201.168.192.in-addr.arpa 11 PTR Host11.lab.local >> C:\DNS.log
@@ -465,8 +407,6 @@ if (Test-Path "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe")
 		del c:\TEMP\SQLEXPR_x64_ENU.EXE 
 		Write-BuildLog "Creating Databases."
 		Start-Process "C:\Program Files\Microsoft SQL Server\110\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDB.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
-		Start-Process "C:\Program Files\Microsoft SQL Server\110\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDBvCD51.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
-		Start-Process "C:\Program Files\Microsoft SQL Server\110\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDBvCD15.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
 		regedit -s B:\Automate\DC\SQLTCP.reg
 	} elseif (Test-Path "B:\VIM_55\redist\SQLEXPR\SQLEXPR_x64_ENU.exe") {
 		$vc5SQL = $true
@@ -477,8 +417,6 @@ if (Test-Path "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe")
 		del c:\TEMP\SQLEXPR_x64_ENU.EXE 
 		Write-BuildLog "Creating Databases."
 		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDB.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
-		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDBvCD51.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
-		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDBvCD15.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
 		regedit -s B:\Automate\DC\SQLTCP.reg
 	} elseif (Test-Path "B:\VIM_51\redist\SQLEXPR\SQLEXPR_x64_ENU.exe") {
 		$vc5SQL = $true
@@ -488,8 +426,6 @@ if (Test-Path "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe")
 		Start-Process C:\temp\SQLEXPR_x64_ENU.exe -ArgumentList $Arguments -Wait
 		Write-BuildLog "Creating Databases."
 		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDB.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
-		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDBvCD51.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
-		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDBvCD15.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
 		regedit -s B:\Automate\DC\SQLTCP.reg
 	} elseif (Test-Path "B:\VIM_50\redist\SQLEXPR\SQLEXPR_x64_ENU.exe") {
 		$vc5SQL = $true
@@ -499,7 +435,6 @@ if (Test-Path "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe")
 		Start-Process C:\temp\SQLEXPR_x64_ENU.exe -ArgumentList $Arguments -Wait
 		Write-BuildLog "Creating Databases."
 		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDB.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
-		Start-Process "C:\Program Files\Microsoft SQL Server\100\Tools\Binn\sqlcmd.exe" -ArgumentList "-S dc\SQLEXPRESS -i B:\Automate\DC\MakeDBvCD15.txt" -RedirectStandardOutput c:\sqllog.txt -Wait
 		regedit -s B:\Automate\DC\SQLTCP.reg
 	} elseif (Test-Path "B:\VIM_41\redist\SQLEXPR\x64\SQLEXPR.EXE") {
 		copy B:\VIM_41\redist\SQLEXPR\x64\SQLEXPR.EXE C:\temp
@@ -528,6 +463,7 @@ If (((([System.Environment]::OSVersion.Version.Major *10) +[System.Environment]:
 			Write-BuildLog "The version of SQL Management Studio on the Build share is incompatible with SQL Server 2008 Express R2 SP1. Please see ReadMe.html on the Build share."
 		} else {
 			Write-BuildLog "SQL Management Studio found; installing."
+			Install-WindowsFeature Net-Framework-Core
 			Start-Process B:\SQLManagementStudio_x64_ENU.exe -ArgumentList "/ACTION=INSTALL /IACCEPTSQLSERVERLICENSETERMS /FEATURES=Tools /q" -Wait -Verb RunAs
 		}
 	} else { Write-BuildLog "SQL Management Studio not found (optional)."}
@@ -598,19 +534,19 @@ if (Test-Path -Path "B:\VMTools\setup*") {
 		$vcinstall = ((Select-String -SimpleMatch "VCInstall=" -Path "B:\Automate\automate.ini").line).substring(10)
 		switch ($vcinstall) {
 			60 {
-			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/6.0/windows/VMware-tools-windows-9.10.0-2476743.iso -awget.log
+			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/6.0/windows/VMware-tools-windows-9.10.0-2476743.iso --no-check-certificate -awget.log
 			. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VMtools\ c:\temp\VMware-tools-windows-9.10.0-2476743.iso >> C:\ExtractLog.txt
 			Write-BuildLog "VMware Tools V6.0 Downloaded and extracted to build share."
 			} 	55 {
-			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/5.5u2/windows/VMware-tools-windows-9.4.10-2068191.iso -awget.log
+			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/5.5u2/windows/VMware-tools-windows-9.4.10-2068191.iso --no-check-certificate -awget.log
 			. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VMtools\ c:\temp\VMware-tools-windows-9.4.10-2068191.iso >> C:\ExtractLog.txt
 			Write-BuildLog "VMware Tools V5.5u2 Downloaded and extracted to build share."
 			}	51 {
-			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/5.1u3/windows/x64/VMware-tools-windows-9.0.15-2323214.iso -awget.log
+			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/5.1u3/windows/x64/VMware-tools-windows-9.0.15-2323214.iso --no-check-certificate -awget.log
 			. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VMtools\ c:\temp\VMware-tools-windows-9.0.15-2323214.iso >> C:\ExtractLog.txt
 			Write-BuildLog "VMware Tools V5.1u3 Downloaded and extracted to build share."
 			}	50 {
-			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/5.0u3/windows/x64/VMware-tools-windows-8.6.11-1310128.iso -awget.log
+			B:\Automate\_Common\wget.exe -nd http://packages.vmware.com/tools/esx/5.0u3/windows/x64/VMware-tools-windows-8.6.11-1310128.iso --no-check-certificate -awget.log
 			. "C:\Program Files\7-Zip\7z.exe" x -r -y -aoa -oB:\VMtools\ c:\temp\VMware-tools-windows-8.6.11-1310128.iso >> C:\ExtractLog.txt
 			Write-BuildLog "VMware Tools V5.0u3 Downloaded and extracted to build share."
 			}
@@ -625,7 +561,22 @@ if (Test-Path -Path "B:\VMTools\setup*") {
 if (($vmtools) -and (-Not (Test-Path "C:\Program Files\VMware\VMware Tools\VMwareToolboxCmd.exe"))) {
 	Write-BuildLog "Installing VMware tools, build complete after reboot."
 	Write-BuildLog "(Re)build vCenter next."
+	if (([bool]($emailto -as [Net.Mail.MailAddress])) -and ($SmtpServer -ne "none")){
+		$mailmessage = New-Object system.net.mail.mailmessage
+		$SMTPClient = New-Object Net.Mail.SmtpClient($SmtpServer, 25) 
+		$mailmessage.from = "AutoLab<autolab@labguides.com>"
+		$mailmessage.To.add($emailto)
+		$Summary = "Completed AutoLab VM build.`r`n"
+		$Summary += "The build of $env:computername has finished, installing VMware Tools and rebooting`r`n"
+		$Summary += "The build log is attached`r`n"
+		$mailmessage.Subject = "$env:computername VM build finished"
+		$mailmessage.Body = $Summary
+		$attach = new-object Net.Mail.Attachment("C:\buildlog.txt", 'text/plain') 
+		$mailmessage.Attachments.Add($attach) 
+		$message.Attachments.Add($attach) 
+		$SMTPClient.Send($mailmessage)
+	}
 	Start-Process B:\VMTools\setup64.exe -ArgumentList '/s /v "/qn"' -verb RunAs -Wait
-	Start-Sleep -Seconds 5
+	Start-Sleep -Seconds 300
 }
 Read-Host "Press <ENTER> to exit"
